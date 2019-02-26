@@ -44,16 +44,19 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   priv_nh.param("full_clouds", full_clouds_, false);
   priv_nh.param("grid_dimensions", grid_dim_, 320);
   priv_nh.param("height_threshold", height_diff_threshold_, 0.12);
+  priv_nh.param("negative_threshold", negative_diff_threshold_, -0.5);
   
   ROS_INFO_STREAM("height map parameters: "
                   << grid_dim_ << "x" << grid_dim_ << ", "
                   << m_per_cell_ << "m cells, "
                   << height_diff_threshold_ << "m threshold, "
+                  << negative_diff_threshold_ << "m negative_threshold, "
                   << (full_clouds_? "": "not ") << "publishing full clouds");
 
   // Set up publishers  
   obstacle_publisher_ = node.advertise<VPointCloud>("velodyne_obstacles",1);
   clear_publisher_ = node.advertise<VPointCloud>("velodyne_clear",1);  
+  grid_publisher_ = node.advertise<nav_msgs::OccupancyGrid>("obstacles_grid",1);  
 
   // subscribe to Velodyne data points
   velodyne_scan_ = node.subscribe("velodyne_points", 10,
@@ -93,7 +96,7 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
     int x = ((grid_dim_/2)+scan->points[i].x/m_per_cell_);
     int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
     if (x >= 0 && x < grid_dim_ && y >= 0 && y < grid_dim_ && init[x][y]) {
-      if ((max[x][y] - min[x][y] > height_diff_threshold_) ) {   
+      if ((max[x][y] - min[x][y] > height_diff_threshold_) || max[x][y] < negative_diff_threshold_ ) {   
         obstacle_cloud_.points[obs_count].x = scan->points[i].x;
         obstacle_cloud_.points[obs_count].y = scan->points[i].y;
         obstacle_cloud_.points[obs_count].z = scan->points[i].z;
@@ -153,7 +156,7 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
     int x = ((grid_dim_/2)+scan->points[i].x/m_per_cell_);
     int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
     if (x >= 0 && x < grid_dim_ && y >= 0 && y < grid_dim_ && init[x][y]) {
-      if ((max[x][y] - min[x][y] > height_diff_threshold_) ) {  
+      if ((max[x][y] - min[x][y] > height_diff_threshold_) || max[x][y] < negative_diff_threshold_ ) {   
         num_obs[x][y]++;
       } else {
         num_clear[x][y]++;
