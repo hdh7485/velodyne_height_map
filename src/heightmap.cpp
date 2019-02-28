@@ -56,7 +56,7 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   // Set up publishers  
   obstacle_publisher_ = node.advertise<VPointCloud>("velodyne_obstacles",1);
   clear_publisher_ = node.advertise<VPointCloud>("velodyne_clear",1);  
-  grid_publisher_ = node.advertise<nav_msgs::OccupancyGrid>("obstacles_grid",1);  
+  grid_publisher_ = node.advertise<nav_msgs::OccupancyGrid>("map",1);  
 
   // subscribe to Velodyne data points
   velodyne_scan_ = node.subscribe("velodyne_points", 10,
