@@ -250,13 +250,13 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   clear_cloud_.points.resize(empty_count);
   //clear_cloud_.channels[0].values.resize(empty_count);
   
-  if (obstacle_publisher_.getNumSubscribers() > 0)
+  //if (obstacle_publisher_.getNumSubscribers() > 0)
     obstacle_publisher_.publish(obstacle_cloud_);
 
-  if (grid_publisher_.getNumSubscribers() > 0)
+  //if (grid_publisher_.getNumSubscribers() > 0)
     grid_publisher_.publish(obstacle_grid_);
 
-  if (clear_publisher_.getNumSubscribers() > 0)
+  //if (clear_publisher_.getNumSubscribers() > 0)
     clear_publisher_.publish(clear_cloud_);
 }
 
