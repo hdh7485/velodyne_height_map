@@ -11,6 +11,8 @@
 
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
+#include <nav_msgs/OccupancyGrid.h>
+#include <geometry_msgs/Pose.h>
 
 namespace velodyne_height_map {
 
@@ -50,16 +52,19 @@ private:
   int grid_dim_;
   double m_per_cell_;
   double height_diff_threshold_;
+  double negative_diff_threshold_;
   bool full_clouds_;
 
   // Point clouds generated in processData
   VPointCloud obstacle_cloud_;            
   VPointCloud clear_cloud_;            
+  nav_msgs::OccupancyGrid obstacle_grid_;
 
   // ROS topics
   ros::Subscriber velodyne_scan_;
   ros::Publisher obstacle_publisher_;
   ros::Publisher clear_publisher_;
+  ros::Publisher grid_publisher_;
 };
 
 } // namespace velodyne_height_map
