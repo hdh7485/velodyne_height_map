@@ -1,16 +1,20 @@
 <launch>
 
-  <param name="use_sim_time" value="true" />
+  <param name="use_sim_time" value="false" />
 
+<!--
   <node pkg="tf" type="static_transform_publisher" name="horizontal_velodyne_broadcaster" args="0.0 0.0 1.3 0.0 0.0 0.0 base_footprint horizontal_laser_link 100" />
   <node pkg="tf" type="static_transform_publisher" name="footprint_broadcaster" args="0.0 0.0 0.0 0.0 0.0 0.0 map base_footprint 100" />
+-->
 
   <node pkg="velodyne_height_map" type="heightmap_node" name="heightmap_node" output="screen">
     <remap from="/velodyne_points" to="velodyne_points"/>
     <param name="height_threshold" value="0.1"/>
-    <param name="cell_size" value="0.25"/>
-    <param name="negative_threshold" value="-1.3"/>
-    <param name="grid_dimensions" value="40"/>
+    <param name="cell_size" value="0.10"/>
+    <param name="negative_threshold" value="-1.5"/>
+    <param name="grid_dimensions" value="100"/>
+
+    <remap from="/map" to="/local_map" />
 
   </node>
 
