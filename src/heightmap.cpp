@@ -36,6 +36,11 @@ namespace velodyne_height_map {
 
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
+#define D2R 0.0174533
+#define R2D 57.2958
+
+double RAY_RES = 1; // in degree
+double NUM_RAY = 180/RAY_RES;
 
 HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
 {
@@ -43,7 +48,7 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   priv_nh.param("cell_size", m_per_cell_, 0.15);
   priv_nh.param("full_clouds", full_clouds_, false);
   priv_nh.param("grid_dimensions", grid_dim_, 50);
-  priv_nh.param("height_threshold", height_diff_threshold_, 0.12);
+  priv_nh.param("height_threshold", height_diff_threshold_, 0.50);
   priv_nh.param("negative_threshold", negative_diff_threshold_, -0.5);
   
   ROS_INFO_STREAM("height map parameters: "
@@ -55,11 +60,12 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
 
   // Set up publishers  
   obstacle_publisher_ = node.advertise<VPointCloud>("velodyne_obstacles",1);
-  clear_publisher_ = node.advertise<VPointCloud>("velodyne_clear",1);  
+  //obstacle_contour_publisher_ = node.advertise<VPointCloud>("velodyne_obstacles_contour",1);
+  clear_publisher_ = node.advertise<VPointCloud>("velodyne_obstacles_contour",1);  
   grid_publisher_ = node.advertise<nav_msgs::OccupancyGrid>("map",1);  
 
   // subscribe to Velodyne data points
-  velodyne_scan_ = node.subscribe("velodyne_points", 10,
+  velodyne_scan_ = node.subscribe("merged_velodyne", 10,
                                   &HeightMap::processData, this,
                                   ros::TransportHints().tcpNoDelay(true));
 
@@ -92,7 +98,8 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
   // build height map
   for (unsigned i = 0; i < npoints; ++i) {
     int x = ((grid_dim_/2)+scan->points[i].x/m_per_cell_);
-    int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
+    //int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
+    int y = (scan->points[i].y/m_per_cell_); // height map for front only
     if (x >= 0 && x < grid_dim_ && y >= 0 && y < grid_dim_) {
       if (!init[x][y]) {
         min[x][y] = scan->points[i].z;
@@ -105,10 +112,11 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
     }
   }
 
-  // display points where map has height-difference > threshold
+  // display points where map has height-difference > thresholdgrid_dim_
   for (unsigned i = 0; i < npoints; ++i) {
     int x = ((grid_dim_/2)+scan->points[i].x/m_per_cell_);
-    int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
+    //int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
+    int y = (scan->points[i].y/m_per_cell_); // height map for front only
     if (x >= 0 && x < grid_dim_ && y >= 0 && y < grid_dim_ && init[x][y]) {
       if ((max[x][y] - min[x][y] > height_diff_threshold_) || max[x][y] < negative_diff_threshold_ ) {   
         obstacle_cloud_.points[obs_count].x = scan->points[i].x;
@@ -119,7 +127,7 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
         obs_count++;
       } else {
         clear_cloud_.points[empty_count].x = scan->points[i].x;
-        clear_cloud_.points[empty_count].y = scan->points[i].y;
+        clear_cloud_.points[obs_count].y = scan->points[i].y;
         clear_cloud_.points[empty_count].z = scan->points[i].z;
         obstacle_grid_.data[y*obstacle_grid_.info.width + x] = 0;
         //clear_cloud_.channels[0].values[empty_count] = (float) scan->points[i].intensity;
@@ -170,6 +178,7 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
   // calculate number of obstacles in each cell
   for (unsigned i = 0; i < npoints; ++i) {
     int x = ((grid_dim_/2)+scan->points[i].x/m_per_cell_);
+    //int x = (scan->points[i].x/m_per_cell_); // height map only for front
     int y = ((grid_dim_/2)+scan->points[i].y/m_per_cell_);
     if (x >= 0 && x < grid_dim_ && y >= 0 && y < grid_dim_ && init[x][y]) {
       if ((max[x][y] - min[x][y] > height_diff_threshold_) || max[x][y] < negative_diff_threshold_ ) {   
@@ -184,12 +193,14 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
   }
   // create clouds from grid
   double grid_offset=grid_dim_/2.0*m_per_cell_;
-  for (int x = 0; x < grid_dim_; x++) {
+  for (int x = grid_dim_/2.0; x < grid_dim_; x++) {
     for (int y = 0; y < grid_dim_; y++) {
-      if (num_obs[x][y]>0) {
+      if (num_obs[x][y]>0 ) {
 
         obstacle_cloud_.points[obs_count].x = -grid_offset + (x*m_per_cell_+m_per_cell_/2.0);
+        //obstacle_cloud_.points[obs_count].x =(x*m_per_cell_+m_per_cell_/2.0); // height map only for front
         obstacle_cloud_.points[obs_count].y = -grid_offset + (y*m_per_cell_+m_per_cell_/2.0);
+        
         obstacle_cloud_.points[obs_count].z = height_diff_threshold_;
         //obstacle_cloud_.channels[0].values[obs_count] = (float) 255.0;
         obstacle_grid_.data[y*obstacle_grid_.info.width + x] = 100;
@@ -197,7 +208,8 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
       }
       if (num_clear[x][y]>0) {
         clear_cloud_.points[empty_count].x = -grid_offset + (x*m_per_cell_+m_per_cell_/2.0);
-        clear_cloud_.points[empty_count].y = -grid_offset + (y*m_per_cell_+m_per_cell_/2.0);
+        //obstacle_cloud_.points[obs_count].x =(x*m_per_cell_+m_per_cell_/2.0); // height map only for front
+        clear_cloud_.points[obs_count].y = -grid_offset + (y*m_per_cell_+m_per_cell_/2.0);
         clear_cloud_.points[empty_count].z = height_diff_threshold_;
         //clear_cloud_.channels[0].values[empty_count] = (float) 255.0;
         obstacle_grid_.data[y*obstacle_grid_.info.width + x] = 0;
@@ -205,6 +217,128 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
       }
     }
   }
+
+    std::vector<double> vec_ray_len;
+    std::vector<double> vec_ray_theta;
+    std::vector<int> height_map_contour_x;
+    std::vector<int> height_map_contour_y;
+
+    int num_ray = 180/RAY_RES;
+    // ray init
+    for (int i =0; i < num_ray; i++ )
+    {
+        if(i<=num_ray/2)
+            vec_ray_theta.push_back(i*RAY_RES*D2R);
+        else
+            vec_ray_theta.push_back((num_ray-i)*RAY_RES*D2R);
+
+        if(i*RAY_RES <= 45 || i*RAY_RES >= 135)
+        {
+            double len = grid_dim_/2.0*m_per_cell_/(cos(RAY_RES*i*D2R)+0.00000001);
+            vec_ray_len.push_back(abs(len));
+        }
+        else
+        {
+            double len = sqrt(pow(grid_dim_/2.0*m_per_cell_,2) + pow(grid_dim_/2.0*m_per_cell_/tan(RAY_RES*i*D2R),2));
+            vec_ray_len.push_back(abs(len));
+        }
+//        height_map_contour_x.push_back(10000);
+//        height_map_contour_y.push_back(10000);
+
+//        std::cout << "len at " << i << ": " << vec_ray_len.at(i) << std::endl;
+    }
+
+//    double cross_half_dist = m_per_cell_*1.4142135623/2;
+
+    double ego_x = grid_dim_/2.0-0.5;
+    double ego_y = grid_dim_/2.0-0.5;
+
+    for (int x = grid_dim_/2.0 + 1; x < grid_dim_-1; x++)
+    {
+        for(int y = 0; y < grid_dim_; y++)
+        {
+            if(num_obs[x][y]>0)
+            {
+                double ray_length = sqrt(pow(x-ego_x,2) + pow(y-ego_y,2))*m_per_cell_;
+
+                if(y > (grid_dim_-1)/2) // left side
+                {
+                    double max_theta_ray_x = x+0.5; double max_theta_ray_y = y-0.5;
+                    double min_theta_ray_x = x-0.5; double min_theta_ray_y = y+0.5;
+
+                    double max_x = abs(max_theta_ray_x - ego_x);
+                    double max_y = abs(max_theta_ray_y - ego_y);
+
+                    double min_x = abs(min_theta_ray_x - ego_x);
+                    double min_y = abs(min_theta_ray_y - ego_y);
+
+                    double max_theta = atan2(max_x,max_y); double min_theta = atan2(min_x,min_y);
+
+//                    std::cout << "right side max theta " << max_theta << " ::: " << "min theta " << min_theta << std::endl;
+
+                    // for each ray
+                    for(int j=num_ray/2; j<num_ray; j++)
+                    {
+                        if(vec_ray_theta.at(j) <= max_theta && vec_ray_theta.at(j) >= min_theta)
+                        {
+                            if(vec_ray_len.at(j) > ray_length)
+                            {
+                                vec_ray_len.at(j) = ray_length;
+//                                height_map_contour_x.at(j) = x;
+//                                height_map_contour_y.at(j) = y;
+                                height_map_contour_x.push_back(x);
+                                height_map_contour_y.push_back(y);
+                            }
+                        }
+                    }
+                }
+
+                else if(y < (grid_dim_-1)/2) // right side
+                {
+                    double max_theta_ray_x = x+0.5; double max_theta_ray_y = y+0.5;
+                    double min_theta_ray_x = x-0.5; double min_theta_ray_y = y-0.5;
+
+                    double max_x = abs(max_theta_ray_x - ego_x);
+                    double max_y = abs(max_theta_ray_y - ego_y);
+
+                    double min_x = abs(min_theta_ray_x - ego_x);
+                    double min_y = abs(min_theta_ray_y - ego_y);
+
+                    double max_theta = atan2(max_x,max_y); double min_theta = atan2(min_x,min_y);
+
+//                    std::cout << "left side max theta " << max_theta << " ::: " << "min theta " << min_theta << std::endl;
+
+                    // for each ray
+                    for(int j=0; j<num_ray/2-1; j++)
+                    {
+                        if(vec_ray_theta.at(j) <= max_theta && vec_ray_theta.at(j) >= min_theta)
+                        {
+                            if(vec_ray_len.at(j) > ray_length)
+                            {
+                                vec_ray_len.at(j) = ray_length;
+//                                height_map_contour_x.at(j) = x;
+//                                height_map_contour_y.at(j) = y;
+                                height_map_contour_x.push_back(x);
+                                height_map_contour_y.push_back(y);
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+    for(int i=0; i < height_map_contour_x.size(); i++)
+    {
+        obstacle_cloud_contour.points[i].x = -grid_offset + (height_map_contour_x.at(i)*m_per_cell_+m_per_cell_/2.0);
+        obstacle_cloud_contour.points[i].y = -grid_offset + (height_map_contour_y.at(i)*m_per_cell_+m_per_cell_/2.0);
+        obstacle_cloud_contour.points[i].z = 0;
+    }
+
+    obs_contour_cnt = height_map_contour_x.size();
+
+//    std::cout << "obs contour cnt : " <<  obs_contour_cnt << std::endl;
 }
 
 /** point cloud input callback */
@@ -222,6 +356,9 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   clear_cloud_.header.stamp = scan->header.stamp;
   clear_cloud_.header.frame_id = scan->header.frame_id;
 
+  obstacle_cloud_contour.header.stamp = scan->header.stamp;
+  obstacle_cloud_contour.header.frame_id = scan->header.frame_id;
+
   // pass along original time stamp and frame ID
   obstacle_grid_.header.stamp = ros::Time::now();
   obstacle_grid_.header.frame_id = scan->header.frame_id;
@@ -236,28 +373,43 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   clear_cloud_.points.resize(npoints);
   //clear_cloud_.channels[0].values.resize(npoints);
 
+  obstacle_cloud_contour.points.resize(npoints);
+
   size_t obs_count=0;
   size_t empty_count=0;
   // either return full point cloud or a discretized version
   if (full_clouds_)
+  {
+//      ROS_INFO("full cloud");
     constructFullClouds(scan,npoints,obs_count, empty_count);
+  }
   else
+  {
+//      ROS_INFO("grid cloud");
     constructGridClouds(scan,npoints,obs_count, empty_count);
+  }
   
   obstacle_cloud_.points.resize(obs_count);
   //obstacle_cloud_.channels[0].values.resize(obs_count);
 
-  clear_cloud_.points.resize(empty_count);
+  //clear_cloud_.points.resize(empty_count);
   //clear_cloud_.channels[0].values.resize(empty_count);
+
+  clear_cloud_.points.resize(obs_contour_cnt);
+  //obstacle_cloud_contour.points.resize(obs_contour_cnt);
   
   //if (obstacle_publisher_.getNumSubscribers() > 0)
-    obstacle_publisher_.publish(obstacle_cloud_);
+
+  obstacle_publisher_.publish(obstacle_cloud_);
+  //obstacle_publisher_.publish(obstacle_cloud_contour);
+
+  //obstacle_contour_publisher_.publish(obstacle_cloud_contour);
 
   //if (grid_publisher_.getNumSubscribers() > 0)
-    grid_publisher_.publish(obstacle_grid_);
+  grid_publisher_.publish(obstacle_grid_);
 
   //if (clear_publisher_.getNumSubscribers() > 0)
-    clear_publisher_.publish(clear_cloud_);
+  clear_publisher_.publish(obstacle_cloud_contour);
 }
 
 } // namespace velodyne_height_map

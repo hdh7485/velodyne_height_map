@@ -14,6 +14,8 @@
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/Pose.h>
 
+#include <vector>
+
 namespace velodyne_height_map {
 
 // shorter names for point cloud types in this namespace
@@ -57,12 +59,15 @@ private:
 
   // Point clouds generated in processData
   VPointCloud obstacle_cloud_;            
-  VPointCloud clear_cloud_;            
+  VPointCloud clear_cloud_;
+  VPointCloud obstacle_cloud_contour;
+  int obs_contour_cnt = 0;
   nav_msgs::OccupancyGrid obstacle_grid_;
 
   // ROS topics
   ros::Subscriber velodyne_scan_;
   ros::Publisher obstacle_publisher_;
+  ros::Publisher obstacle_contour_publisher_;
   ros::Publisher clear_publisher_;
   ros::Publisher grid_publisher_;
 };
