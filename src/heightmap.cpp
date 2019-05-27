@@ -42,6 +42,8 @@ namespace velodyne_height_map {
 double RAY_RES = 1; // in degree
 double NUM_RAY = 180/RAY_RES;
 
+int cnt = 0;
+
 HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
 {
   // get parameters using private node handle
@@ -65,7 +67,7 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   grid_publisher_ = node.advertise<nav_msgs::OccupancyGrid>("map",1);  
 
   // subscribe to Velodyne data points
-  velodyne_scan_ = node.subscribe("merged_velodyne", 10,
+  velodyne_scan_ = node.subscribe("merged_z_filtered_velodyne", 10,
                                   &HeightMap::processData, this,
                                   ros::TransportHints().tcpNoDelay(true));
 
@@ -82,6 +84,7 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   map_origin.orientation.w = 1;
   obstacle_grid_.info.origin = map_origin;
   obstacle_grid_.data.resize(obstacle_grid_.info.width * obstacle_grid_.info.height);
+  obs_contour_cnt = 0;
 }
 
 HeightMap::~HeightMap() {}
@@ -94,6 +97,7 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
   float max[grid_dim_][grid_dim_];
   bool init[grid_dim_][grid_dim_];
   memset(&init, 0, grid_dim_*grid_dim_);
+  ROS_INFO("MEMSET");
   
   // build height map
   for (unsigned i = 0; i < npoints; ++i) {
@@ -139,7 +143,7 @@ void HeightMap::constructFullClouds(const VPointCloud::ConstPtr &scan,
 
 void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
                                     unsigned npoints, size_t &obs_count,
-                                    size_t &empty_count)
+                                    size_t &empty_count, size_t &obs_contour_count)
 {
   float min[grid_dim_][grid_dim_];
   float max[grid_dim_][grid_dim_];
@@ -253,7 +257,7 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
     double ego_x = grid_dim_/2.0-0.5;
     double ego_y = grid_dim_/2.0-0.5;
 
-    for (int x = grid_dim_/2.0 + 1; x < grid_dim_-1; x++)
+    for (int x = (grid_dim_)/2.0; x < grid_dim_-1; x++)
     {
         for(int y = 0; y < grid_dim_; y++)
         {
@@ -284,8 +288,6 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
                             if(vec_ray_len.at(j) > ray_length)
                             {
                                 vec_ray_len.at(j) = ray_length;
-//                                height_map_contour_x.at(j) = x;
-//                                height_map_contour_y.at(j) = y;
                                 height_map_contour_x.push_back(x);
                                 height_map_contour_y.push_back(y);
                             }
@@ -306,8 +308,6 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
 
                     double max_theta = atan2(max_x,max_y); double min_theta = atan2(min_x,min_y);
 
-//                    std::cout << "left side max theta " << max_theta << " ::: " << "min theta " << min_theta << std::endl;
-
                     // for each ray
                     for(int j=0; j<num_ray/2-1; j++)
                     {
@@ -316,8 +316,6 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
                             if(vec_ray_len.at(j) > ray_length)
                             {
                                 vec_ray_len.at(j) = ray_length;
-//                                height_map_contour_x.at(j) = x;
-//                                height_map_contour_y.at(j) = y;
                                 height_map_contour_x.push_back(x);
                                 height_map_contour_y.push_back(y);
                             }
@@ -329,14 +327,23 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
         }
     }
 
+    cnt = 0;
+
     for(int i=0; i < height_map_contour_x.size(); i++)
     {
-        obstacle_cloud_contour.points[i].x = -grid_offset + (height_map_contour_x.at(i)*m_per_cell_+m_per_cell_/2.0);
-        obstacle_cloud_contour.points[i].y = -grid_offset + (height_map_contour_y.at(i)*m_per_cell_+m_per_cell_/2.0);
-        obstacle_cloud_contour.points[i].z = 0;
+	double x_tmp = -grid_offset + (height_map_contour_x.at(i)*m_per_cell_+m_per_cell_/2.0);
+	double y_tmp = -grid_offset + (height_map_contour_y.at(i)*m_per_cell_+m_per_cell_/2.0);
+	if(abs(x_tmp) > 0.5 && abs(y_tmp) > 0.5) {
+		VPoint as;
+        	as.x = x_tmp;
+        	as.y = y_tmp;
+        	as.z = 0;
+		obstacle_cloud_contour.push_back(as);
+		cnt++;
+	}
     }
 
-    obs_contour_cnt = height_map_contour_x.size();
+    obs_contour_count = cnt;
 
 //    std::cout << "obs contour cnt : " <<  obs_contour_cnt << std::endl;
 }
@@ -344,10 +351,6 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
 /** point cloud input callback */
 void HeightMap::processData(const VPointCloud::ConstPtr &scan)
 {
-  if ((obstacle_publisher_.getNumSubscribers() == 0)
-      && (clear_publisher_.getNumSubscribers() == 0))
-    return;
-  
   // pass along original time stamp and frame ID
   obstacle_cloud_.header.stamp = scan->header.stamp;
   obstacle_cloud_.header.frame_id = scan->header.frame_id;
@@ -373,20 +376,21 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   clear_cloud_.points.resize(npoints);
   //clear_cloud_.channels[0].values.resize(npoints);
 
-  obstacle_cloud_contour.points.resize(npoints);
+  obstacle_cloud_contour.points.resize(0);
 
   size_t obs_count=0;
   size_t empty_count=0;
+  size_t obs_contour_count=0;
   // either return full point cloud or a discretized version
   if (full_clouds_)
   {
-//      ROS_INFO("full cloud");
+      //ROS_INFO("full cloud");
     constructFullClouds(scan,npoints,obs_count, empty_count);
   }
   else
   {
-//      ROS_INFO("grid cloud");
-    constructGridClouds(scan,npoints,obs_count, empty_count);
+      //ROS_INFO("grid cloud");
+    constructGridClouds(scan,npoints,obs_count, empty_count,obs_contour_count);
   }
   
   obstacle_cloud_.points.resize(obs_count);
@@ -395,8 +399,11 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   //clear_cloud_.points.resize(empty_count);
   //clear_cloud_.channels[0].values.resize(empty_count);
 
-  clear_cloud_.points.resize(obs_contour_cnt);
-  //obstacle_cloud_contour.points.resize(obs_contour_cnt);
+  //clear_cloud_.points.resize(obs_contour_cnt);
+  //std::cout << "num of obs contour : " << obs_contour_cnt << std::endl;
+  //ROS_INFO("%d", obs_contour_cnt);
+  ROS_DEBUG("%d",obs_contour_count);
+  //obstacle_cloud_contour.points.resize(obs_contour_count);
   
   //if (obstacle_publisher_.getNumSubscribers() > 0)
 

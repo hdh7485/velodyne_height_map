@@ -13,6 +13,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point32.h>
 
 #include <vector>
 
@@ -46,7 +47,7 @@ private:
   void constructFullClouds(const VPointCloud::ConstPtr &scan, unsigned npoints,
                            size_t &obs_count, size_t &empty_count);
   void constructGridClouds(const VPointCloud::ConstPtr &scan, unsigned npoints,
-                           size_t &obs_count, size_t &empty_count);
+                           size_t &obs_count, size_t &empty_count, size_t &obs_contour_count);
 
 
   // Parameters that define the grids and the height threshold
@@ -61,7 +62,7 @@ private:
   VPointCloud obstacle_cloud_;            
   VPointCloud clear_cloud_;
   VPointCloud obstacle_cloud_contour;
-  int obs_contour_cnt = 0;
+  int obs_contour_cnt;
   nav_msgs::OccupancyGrid obstacle_grid_;
 
   // ROS topics
