@@ -57,6 +57,7 @@ private:
   double height_diff_threshold_;
   double negative_diff_threshold_;
   bool full_clouds_;
+  double back_looking_dist_;
 
   // Point clouds generated in processData
   VPointCloud obstacle_cloud_;            

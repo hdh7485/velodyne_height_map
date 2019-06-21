@@ -7,9 +7,10 @@
     <param name="height_threshold" value="0.5"/>
     <param name="cell_size" value="0.5"/>
     <!--param name="cell_size" value="0.5"/-->
-    <param name="negative_threshold" value="-0.5"/>
+    <param name="negative_threshold" value="-10.5"/>
     <!--param name="grid_dimensions" value="200"/-->
     <param name="grid_dimensions" value="600"/>
+    <param name="back_looking_dist" value="3.0"/>
 
     <remap from="/map" to="/local_map" />
 

@@ -52,12 +52,14 @@ HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
   priv_nh.param("grid_dimensions", grid_dim_, 50);
   priv_nh.param("height_threshold", height_diff_threshold_, 0.50);
   priv_nh.param("negative_threshold", negative_diff_threshold_, -0.5);
+  priv_nh.param("back_looking_dist", back_looking_dist_, 3.0); // meter scale
   
   ROS_INFO_STREAM("height map parameters: "
                   << grid_dim_ << "x" << grid_dim_ << ", "
                   << m_per_cell_ << "m cells, "
                   << height_diff_threshold_ << "m threshold, "
                   << negative_diff_threshold_ << "m negative_threshold, "
+                  << back_looking_dist_ << "back_looking_dist, "
                   << (full_clouds_? "": "not ") << "publishing full clouds");
 
   // Set up publishers  
@@ -197,7 +199,8 @@ void HeightMap::constructGridClouds(const VPointCloud::ConstPtr &scan,
   }
   // create clouds from grid
   double grid_offset=grid_dim_/2.0*m_per_cell_;
-  for (int x = grid_dim_/2.0; x < grid_dim_; x++) {
+    
+  for (int x = grid_dim_/2.0 - int(back_looking_dist_/m_per_cell_); x < grid_dim_; x++) {
     for (int y = 0; y < grid_dim_; y++) {
       if (num_obs[x][y]>0 ) {
 
