@@ -405,7 +405,7 @@ void HeightMap::processData(const VPointCloud::ConstPtr &scan)
   //clear_cloud_.points.resize(obs_contour_cnt);
   //std::cout << "num of obs contour : " << obs_contour_cnt << std::endl;
   //ROS_INFO("%d", obs_contour_cnt);
-  ROS_DEBUG("%d",obs_contour_count);
+  ROS_DEBUG("%ld",obs_contour_count);
   //obstacle_cloud_contour.points.resize(obs_contour_count);
   
   //if (obstacle_publisher_.getNumSubscribers() > 0)
