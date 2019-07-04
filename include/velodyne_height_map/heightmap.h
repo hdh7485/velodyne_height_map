@@ -30,6 +30,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <pcl_ros/point_cloud.h>
 
 #include <lcm_to_ros/hyundai_mission.h>
 
@@ -80,6 +81,9 @@ private:
   bool full_clouds_;
   double back_looking_dist_;
 
+  tf2_ros::Buffer tfBuffer_;
+  tf2_ros::TransformListener tfListener_;
+
   // Point clouds generated in processData
   VPointCloud obstacle_cloud_;            
   VPointCloud clear_cloud_;
@@ -100,6 +104,7 @@ private:
   ros::Publisher grid_publisher_;
 
   VPointCloud csv_cloud_; 
+  VPointCloud csv_transformed_cloud_; 
 
   std::string csv_first_lane_center;
   std::string csv_left_lane;

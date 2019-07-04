@@ -28,7 +28,7 @@ obstacles
 
 @author David Claridge, Michael Quinlan 
 
-*/
+ */
 
 #include <velodyne_height_map/heightmap.h>
 
@@ -46,7 +46,7 @@ namespace velodyne_height_map {
 
 	int cnt = 0;
 
-	HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
+	HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh):tfListener_(tfBuffer_)
 	{
 		// get parameters using private node handle
 		priv_nh.param("cell_size", m_per_cell_, 0.15);
@@ -388,7 +388,6 @@ namespace velodyne_height_map {
 								}
 							}
 						}
-
 					}
 				}
 			}
@@ -485,35 +484,41 @@ namespace velodyne_height_map {
 		//obstacle_contour_publisher_.publish(obstacle_cloud_contour);
 
 		//if (grid_publisher_.getNumSubscribers() > 0)
-		
+
 		// only heightmap
-		
+
 		// add CSV
-		for(int i = 0; i < csv_cloud_.size(); i++) {
-			int idx =  int((csv_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
-			       	* int(obstacle_grid_.info.width) + int((csv_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
-			if(idx >= 0) {
-				obstacle_grid_.data[idx] = 100;
-			}
-		}
-		grid_publisher_.publish(obstacle_grid_);
-
-
-		tf2_ros::Buffer tfBuffer;
-                tf2_ros::TransformListener tfListener(tfBuffer);
+		//for(int i = 0; i < csv_cloud_.size(); i++) {
+		//	int idx =  int((csv_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
+		//		* int(obstacle_grid_.info.width) + int((csv_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
+		//	if(idx >= 0) {
+		//		obstacle_grid_.data[idx] = 100;
+		//	}
+		//}
+		//grid_publisher_.publish(obstacle_grid_);
 
 		geometry_msgs::TransformStamped transformStamped;
 		try{
-			transformStamped = tfBuffer.lookupTransform("base_footprint", "odom",
-				ros::Time(0));
+			transformStamped = tfBuffer_.lookupTransform("base_footprint", "odom",
+					ros::Time(0));
 		} catch (tf2::TransformException &ex) {
-			ROS_WARN("Could NOT transform turtle2 to turtle1: %s", ex.what());
+			ROS_WARN("%s", ex.what());
 		}
 
 		sensor_msgs::PointCloud2 cloud_in;
 		sensor_msgs::PointCloud2 cloud_out;
 		pcl::toROSMsg(csv_cloud_, cloud_in);
-                tf2::doTransform(cloud_in, cloud_out, transformStamped);
+		tf2::doTransform(cloud_in, cloud_out, transformStamped);
+                pcl::fromROSMsg(cloud_out, csv_transformed_cloud_);
+
+		for(int i = 0; i < csv_transformed_cloud_.size(); i++) {
+			int idx =  int((csv_transformed_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
+				* int(obstacle_grid_.info.width) + int((csv_transformed_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
+			if(idx >= 0 && idx < obstacle_grid_.data.size()) {
+				obstacle_grid_.data[idx] = 100;
+			}
+		}
+		grid_publisher_.publish(obstacle_grid_);
 
 		//if (clear_publisher_.getNumSubscribers() > 0)
 		clear_publisher_.publish(obstacle_cloud_contour);
