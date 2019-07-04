@@ -94,7 +94,7 @@ namespace velodyne_height_map {
 		obs_contour_cnt = 0;
 
 		// Read CSV, then save into pointcloud type
-		std::string path = ros::package::getPath("csv_to_map");
+		std::string path = ros::package::getPath("velodyne_height_map");
 		csv_first_lane_center = path + "/csv_map/geofence_first_lane_test.csv";
 		csv_right_lane = path + "/csv_map/geofence_right_total_test.csv";
 		csv_left_lane = path + "/csv_map/geofence_left_total_test.csv";
