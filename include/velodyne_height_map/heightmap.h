@@ -80,6 +80,9 @@ private:
   bool full_clouds_;
   double back_looking_dist_;
 
+  tf2_ros::Buffer tfBuffer_;
+  tf2_ros::TransformListener tfListener_;
+
   // Point clouds generated in processData
   VPointCloud obstacle_cloud_;            
   VPointCloud clear_cloud_;

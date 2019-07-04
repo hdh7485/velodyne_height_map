@@ -46,7 +46,7 @@ namespace velodyne_height_map {
 
 	int cnt = 0;
 
-	HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh)
+	HeightMap::HeightMap(ros::NodeHandle node, ros::NodeHandle priv_nh):tfListener_(tfBuffer_)
 	{
 		// get parameters using private node handle
 		priv_nh.param("cell_size", m_per_cell_, 0.15);
@@ -498,13 +498,9 @@ namespace velodyne_height_map {
 		}
 		grid_publisher_.publish(obstacle_grid_);
 
-
-		tf2_ros::Buffer tfBuffer;
-                tf2_ros::TransformListener tfListener(tfBuffer);
-
 		geometry_msgs::TransformStamped transformStamped;
 		try{
-			transformStamped = tfBuffer.lookupTransform("base_footprint", "odom",
+			transformStamped = tfBuffer_.lookupTransform("base_footprint", "odom",
 				ros::Time(0));
 		} catch (tf2::TransformException &ex) {
 			ROS_WARN("Could NOT transform turtle2 to turtle1: %s", ex.what());
