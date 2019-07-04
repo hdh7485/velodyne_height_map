@@ -87,6 +87,10 @@ private:
   int obs_contour_cnt;
   nav_msgs::OccupancyGrid obstacle_grid_;
 
+  int mission_number_;
+  int pos_x_;
+  int pos_y_;
+
   // ROS topics
   ros::Subscriber velodyne_scan_;
   ros::Subscriber mission_subscriber_;

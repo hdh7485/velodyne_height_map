@@ -416,9 +416,9 @@ namespace velodyne_height_map {
 	}
 
 	void HeightMap::missionCallback(const lcm_to_ros::hyundai_mission::ConstPtr& mission_msg){
-		int mission_number = mission_msg->mission_number;
-		int pos_x = mission_msg->pos_x;
-		int pos_y = mission_msg->pos_y;
+		mission_number_ = mission_msg->mission_number;
+		pos_x_ = mission_msg->pos_x;
+		pos_y_ = mission_msg->pos_y;
 	}
 	/** point cloud input callback */
 	void HeightMap::processData(const VPointCloud::ConstPtr &scan)
