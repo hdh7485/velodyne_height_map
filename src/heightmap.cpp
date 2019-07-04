@@ -418,6 +418,8 @@ namespace velodyne_height_map {
 		mission_number_ = mission_msg->mission_number;
 		pos_x_ = mission_msg->pos_x;
 		pos_y_ = mission_msg->pos_y;
+		euclidean_distance_ = std::sqrt(std::pow((pos_x_ - 61), 2)
+				+(std::pow(pos_y_ - 316), 2))
 	}
 	/** point cloud input callback */
 	void HeightMap::processData(const VPointCloud::ConstPtr &scan)
@@ -505,17 +507,19 @@ namespace velodyne_height_map {
 			ROS_WARN("%s", ex.what());
 		}
 
-		sensor_msgs::PointCloud2 cloud_in;
-		sensor_msgs::PointCloud2 cloud_out;
-		pcl::toROSMsg(csv_cloud_, cloud_in);
-		tf2::doTransform(cloud_in, cloud_out, transformStamped);
-                pcl::fromROSMsg(cloud_out, csv_transformed_cloud_);
+		if(mission_number_ == 6 || euclidean_distance_ < 30){
+			sensor_msgs::PointCloud2 cloud_in;
+			sensor_msgs::PointCloud2 cloud_out;
+			pcl::toROSMsg(csv_cloud_, cloud_in);
+			tf2::doTransform(cloud_in, cloud_out, transformStamped);
+			pcl::fromROSMsg(cloud_out, csv_transformed_cloud_);
 
-		for(int i = 0; i < csv_transformed_cloud_.size(); i++) {
-			int idx =  int((csv_transformed_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
-				* int(obstacle_grid_.info.width) + int((csv_transformed_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
-			if(idx >= 0 && idx < obstacle_grid_.data.size()) {
-				obstacle_grid_.data[idx] = 100;
+			for(int i = 0; i < csv_transformed_cloud_.size(); i++) {
+				int idx =  int((csv_transformed_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
+					* int(obstacle_grid_.info.width) + int((csv_transformed_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
+				if(idx >= 0 && idx < obstacle_grid_.data.size()) {
+					obstacle_grid_.data[idx] = 100;
+				}
 			}
 		}
 		grid_publisher_.publish(obstacle_grid_);

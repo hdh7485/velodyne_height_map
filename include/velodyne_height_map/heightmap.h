@@ -23,6 +23,7 @@
 #include <boost/foreach.hpp>
 
 #include <cstdlib>
+#include <cmath>
 #include <string>
 
 #include <tf2_ros/transform_listener.h>
@@ -94,6 +95,7 @@ private:
   int mission_number_;
   int pos_x_;
   int pos_y_;
+  double euclidean_distance_;
 
   // ROS topics
   ros::Subscriber velodyne_scan_;
