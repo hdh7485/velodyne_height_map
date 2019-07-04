@@ -30,6 +30,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <pcl_ros/point_cloud.h>
 
 #include <lcm_to_ros/hyundai_mission.h>
 
@@ -99,6 +100,7 @@ private:
   ros::Publisher grid_publisher_;
 
   VPointCloud csv_cloud_; 
+  VPointCloud csv_transformed_cloud_; 
 
   std::string csv_first_lane_center;
   std::string csv_left_lane;
