@@ -136,19 +136,13 @@ namespace velodyne_height_map {
 				std::vector <double> row;
 				while (getline(iss, lineStream, '\t'))
 				{
-					//cout <<"ERROR" << endl;
-					//cout << line << endl;
-					row.push_back(stold(lineStream,&sz)); // convert to double
-				
+					row.push_back(std::stod(lineStream, &sz)); // convert to double
 				}
-				//cout <<"error 2" << endl;
 
 				VPoint tmp;
 				tmp.x = row[1];
 				tmp.y = row[0];
 				tmp.z = 0;
-
-				//cout << row[] << endl;
 
 				csv_cloud_.push_back(tmp);
 				//csv_cloud_.points[tmp_cnt].x = row[1];

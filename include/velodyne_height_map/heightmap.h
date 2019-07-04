@@ -62,7 +62,7 @@ public:
    *  @param frame_id data frame of reference
    */
   void processData(const VPointCloud::ConstPtr &scan);
-  void mssionCallback(const lcm_to_ros::hyundai_mission::ConstPtr& mission_msg);
+  void missionCallback(const lcm_to_ros::hyundai_mission::ConstPtr& mission_msg);
 
 private:
   void constructFullClouds(const VPointCloud::ConstPtr &scan, unsigned npoints,
@@ -101,7 +101,7 @@ private:
   std::string csv_left_lane;
   std::string csv_right_lane;
   
-  std::vector<std::vector<double>> csv_points;
+  std::vector<std::vector<double> > csv_points;
   std::vector<string> filenames;
 
 };

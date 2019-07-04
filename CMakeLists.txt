@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(velodyne_height_map)
 
+set(CMAKE_CXX_STANDARD 11)
 set(${PROJECT_NAME}_CATKIN_DEPS
     nodelet
     roscpp
     pcl_ros
+    lcm_to_ros
     sensor_msgs
     tf
     tf2
@@ -24,6 +26,11 @@ include_directories(include
                     ${Boost_INCLUDE_DIR}
                     ${catkin_INCLUDE_DIRS}
                     ${PCL_INCLUDE_DIR})
+
+generate_messages(
+  DEPENDENCIES
+  lcm_to_ros
+)
 
 catkin_package(CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS})
 
