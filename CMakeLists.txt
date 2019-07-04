@@ -6,7 +6,11 @@ set(${PROJECT_NAME}_CATKIN_DEPS
     roscpp
     pcl_ros
     sensor_msgs
-    tf)
+    tf
+    tf2
+    tf2_ros
+    tf2_msgs
+    tf2_sensor_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
              ${${PROJECT_NAME}_CATKIN_DEPS}

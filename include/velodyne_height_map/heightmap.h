@@ -10,12 +10,30 @@
 #define _HEIGHT_MAP_H_
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <pcl_ros/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point32.h>
 
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <boost/foreach.hpp>
+
+#include <cstdlib>
+#include <string>
+
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/buffer.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+
+#include <lcm_to_ros/hyundai_mission.h>
+
+using namespace std;
 
 namespace velodyne_height_map {
 
@@ -33,8 +51,10 @@ public:
    *  @param private_nh private NodeHandle of this instance
    */
   HeightMap(ros::NodeHandle node, ros::NodeHandle private_nh);
+
   ~HeightMap();
 
+  void CSVReader(std::vector<string> vec_string_);
   /** callback to process data input
    *
    *  @param scan vector of input 3D data points
@@ -42,6 +62,7 @@ public:
    *  @param frame_id data frame of reference
    */
   void processData(const VPointCloud::ConstPtr &scan);
+  void mssionCallback(const lcm_to_ros::hyundai_mission::ConstPtr& mission_msg);
 
 private:
   void constructFullClouds(const VPointCloud::ConstPtr &scan, unsigned npoints,
@@ -68,10 +89,21 @@ private:
 
   // ROS topics
   ros::Subscriber velodyne_scan_;
+  ros::Subscriber mission_subscriber_;
   ros::Publisher obstacle_publisher_;
   ros::Publisher obstacle_contour_publisher_;
   ros::Publisher clear_publisher_;
   ros::Publisher grid_publisher_;
+
+  VPointCloud csv_cloud_; 
+
+  std::string csv_first_lane_center;
+  std::string csv_left_lane;
+  std::string csv_right_lane;
+  
+  std::vector<std::vector<double>> csv_points;
+  std::vector<string> filenames;
+
 };
 
 } // namespace velodyne_height_map
