@@ -99,34 +99,33 @@ namespace velodyne_height_map {
 		csv_right_lane = path + "/csv_map/geofence_right_total_test.csv";
 		csv_left_lane = path + "/csv_map/geofence_left_total_test.csv";
 
-		filenames.push_back(csv_first_lane_center);
-		filenames.push_back(csv_left_lane);
-		filenames.push_back(csv_right_lane);
+		filenames_.push_back(csv_right_lane);
+		filenames_.push_back(csv_left_lane);
+		filenames_.push_back(csv_first_lane_center);
 
-		CSVReader(filenames);
+		CSVReader(filenames_);
 	}
 
 	HeightMap::~HeightMap() {}
 
-	void HeightMap::CSVReader(std::vector<string> vec_string_) {
+	void HeightMap::CSVReader(std::vector<string> vec_string) {
 		//std::vector<std::vector<double>> output;
-		ifstream csvFile;
 		int tmp_cnt = 0;
 
 
-		for(int i =0; i< vec_string_.size(); i++) {
-			csvFile.open(vec_string_[i].c_str());
-			if (!csvFile.is_open())
-			{
+		for(int i = 0; i < vec_string.size(); i++) {
+			ifstream csvFile;
+                        ROS_INFO_STREAM(vec_string[i]);
+			csvFile.open(vec_string[i].c_str());
+			if (!csvFile.is_open()) {
 				std::cout << "Path Wrong!!!!" << std::endl;
 				exit(EXIT_FAILURE);
 			}
 			string line;
 			std::vector <string> vec;
-			while (getline(csvFile, line))
-			{
-				if (line.empty()) // skip empty lines:
-				{
+			while (getline(csvFile, line)) {
+                        	ROS_INFO_STREAM(line);
+				if (line.empty()) {
 					cout << "empty line!" << endl;
 					continue;
 				}
@@ -134,8 +133,7 @@ namespace velodyne_height_map {
 				std::string lineStream;
 				std::string::size_type sz;
 				std::vector <double> row;
-				while (getline(iss, lineStream, '\t'))
-				{
+				while (getline(iss, lineStream, '\t')) {
 					row.push_back(std::stod(lineStream, &sz)); // convert to double
 				}
 
@@ -147,6 +145,7 @@ namespace velodyne_height_map {
 				csv_cloud_.push_back(tmp);
 				tmp_cnt++;
 			}
+			//ROS_INFO_STREAM(csv_cloud_.size());
 		}
 	}
 
@@ -502,7 +501,6 @@ namespace velodyne_height_map {
 		}
 
 		if(mission_number_ == 6 || euclidean_distance_ < 30){
-                        ROS_INFO("csv add");
 			sensor_msgs::PointCloud2 cloud_in;
 			sensor_msgs::PointCloud2 cloud_out;
 			pcl::toROSMsg(csv_cloud_, cloud_in);
@@ -510,8 +508,7 @@ namespace velodyne_height_map {
 			pcl::fromROSMsg(cloud_out, csv_transformed_cloud_);
 
 			for(int i = 0; i < csv_transformed_cloud_.size(); i++) {
-				int idx =  int((csv_transformed_cloud_.points[i].x - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution)
-					* int(obstacle_grid_.info.width) + int((csv_transformed_cloud_.points[i].y - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
+				int idx =  int((csv_transformed_cloud_.points[i].y - obstacle_grid_.info.origin.position.y)/obstacle_grid_.info.resolution) * int(obstacle_grid_.info.width) + int((csv_transformed_cloud_.points[i].x - obstacle_grid_.info.origin.position.x)/obstacle_grid_.info.resolution);
 				if(idx >= 0 && idx < obstacle_grid_.data.size()) {
 					obstacle_grid_.data[idx] = 100;
 				}

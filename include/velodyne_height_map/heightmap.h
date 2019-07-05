@@ -113,7 +113,7 @@ private:
   std::string csv_right_lane;
   
   std::vector<std::vector<double> > csv_points;
-  std::vector<string> filenames;
+  std::vector<string> filenames_;
 
 };
 
