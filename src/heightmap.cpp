@@ -123,7 +123,7 @@ namespace velodyne_height_map {
 			}
 			string line;
 			std::vector <string> vec;
-			while (getline(csvFile,line))
+			while (getline(csvFile, line))
 			{
 				if (line.empty()) // skip empty lines:
 				{
@@ -145,11 +145,6 @@ namespace velodyne_height_map {
 				tmp.z = 0;
 
 				csv_cloud_.push_back(tmp);
-				//csv_cloud_.points[tmp_cnt].x = row[1];
-				//csv_cloud_.points[tmp_cnt].y = row[0];
-				//csv_cloud_.points[tmp_cnt].z = 0;
-
-				//output.push_back(row);
 				tmp_cnt++;
 			}
 		}
@@ -310,7 +305,7 @@ namespace velodyne_height_map {
 			}
 			else
 			{
-				double len = sqrt(pow(grid_dim_/2.0*m_per_cell_,2) + pow(grid_dim_/2.0*m_per_cell_/tan(RAY_RES*i*D2R),2));
+				double len = sqrt(pow(grid_dim_/2.0*m_per_cell_, 2) + pow(grid_dim_/2.0*m_per_cell_/tan(RAY_RES*i*D2R), 2));
 				vec_ray_len.push_back(abs(len));
 			}
 			//        height_map_contour_x.push_back(10000);
@@ -418,8 +413,7 @@ namespace velodyne_height_map {
 		mission_number_ = mission_msg->mission_number;
 		pos_x_ = mission_msg->pos_x;
 		pos_y_ = mission_msg->pos_y;
-		euclidean_distance_ = std::sqrt(std::pow((pos_x_ - 61), 2)
-				+(std::pow(pos_y_ - 316), 2))
+		euclidean_distance_ = std::sqrt(pow((pos_x_ - 61), 2) + pow((pos_y_ - 316), 2));
 	}
 	/** point cloud input callback */
 	void HeightMap::processData(const VPointCloud::ConstPtr &scan)
@@ -508,6 +502,7 @@ namespace velodyne_height_map {
 		}
 
 		if(mission_number_ == 6 || euclidean_distance_ < 30){
+                        ROS_INFO("csv add");
 			sensor_msgs::PointCloud2 cloud_in;
 			sensor_msgs::PointCloud2 cloud_out;
 			pcl::toROSMsg(csv_cloud_, cloud_in);
